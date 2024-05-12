@@ -3,3 +3,4 @@ doipclient
 python-can
 can-isotp>=2.0.2
 paho-mqtt>=2.0.0
+yaml

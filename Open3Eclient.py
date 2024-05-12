@@ -20,6 +20,7 @@ import json
 import paho.mqtt.client as paho
 
 import Open3Eclass
+import homeAssistant.Open3EHomeAssistant as hass
 
 # default ECU address
 deftx = 0x680
@@ -125,6 +126,12 @@ def on_message(client, userdata, msg):
             print('bad payload: ' + str(msg.payload)+'; topic: ' + str(msg.topic))
             payload = ''
 
+def publish2homeassistant(client, userdata, msg):
+    topic = str(msg.topic)            # Topic in String umwandeln
+    print(topic)
+
+def subscription(client, userdata, mid, reason_code_list, properties):
+    print("done")
 
 # subs  ~~~~~~~~~~~~~~~~~~~~~~~
 def listen(readdids=None, timestep=0):
@@ -282,6 +289,7 @@ parser.add_argument("-dev", "--dev", type=str, help="boiler type --dev vdens or 
 parser.add_argument("-tx", "--ecuaddr", type=str, help="ECU Address")
 parser.add_argument("-cnfg", "--config", type=str, help="json configuration file")
 parser.add_argument("-a", "--scanall", action='store_true', help="dump all dids")
+parser.add_argument("-hass", "--homeassistant", action='store_true', help="publish all published mqtt topics to home assistant")
 parser.add_argument("-r", "--read", type=str, help="read did, e.g. 0x173,0x174")
 parser.add_argument("-w", "--write", type=str, help="write did, e.g. -w 396=D601 (raw data only!)")
 parser.add_argument("-raw", "--raw", action='store_true', help="return raw data for all dids")
@@ -303,25 +311,25 @@ if(args.ecuaddr != None):
 
 
 # list of ECUs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if(args.config != None):
-    if(args.config == 'dev'):  # short
-        args.config = 'devices.json'
-    # get configuration from file
-    with open(args.config, 'r') as file:
-        devjson = json.load(file)
-    # make ECU list
-    for device, config in devjson.items():
-        addrtx = getint(config.get("tx"))
-        dplist = config.get("dpList")
-        # make ecu
-        ecu = Open3Eclass.O3Eclass(ecutx=addrtx, doip=args.doip, can=args.can, dev=dplist)
-        dicEcus[addrtx] = ecu
-        dicDevAddrs[device] = addrtx
-else:
-    # only default device
-    ecu = Open3Eclass.O3Eclass(ecutx=deftx, doip=args.doip, can=args.can, dev=args.dev)
-    dicEcus[deftx] = ecu
-    dicDevAddrs[args.dev] = deftx
+#if(args.config != None):
+#    if(args.config == 'dev'):  # short
+#        args.config = 'devices.json'
+#    # get configuration from file
+#    with open(args.config, 'r') as file:
+#        devjson = json.load(file)
+#    # make ECU list
+#    for device, config in devjson.items():
+#        addrtx = getint(config.get("tx"))
+#        dplist = config.get("dpList")
+#        # make ecu
+#        ecu = Open3Eclass.O3Eclass(ecutx=addrtx, doip=args.doip, can=args.can, dev=dplist)
+#        dicEcus[addrtx] = ecu
+#        dicDevAddrs[device] = addrtx
+#else:
+#    # only default device
+#    ecu = Open3Eclass.O3Eclass(ecutx=deftx, doip=args.doip, can=args.can, dev=args.dev)
+#    dicEcus[deftx] = ecu
+#    dicDevAddrs[args.dev] = deftx
     
 
 # MQTT setup ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -400,6 +408,11 @@ try:
             lst = ecu.readAll(args.raw)
             for itm in lst:
                 showread(addr=addr, did=itm[0], value=itm[1], idstr=itm[2], msglvl=msglvl)
+
+    #homeassistant
+    elif(args.homeassistant != None):
+        #hass.discover(mqtt_client)
+        hass.copypaste(mqtt_client)
 
 except (KeyboardInterrupt, InterruptedError):
     # <STRG-C> oder SIGINT to stop

@@ -11,3 +11,7 @@ Open3Edatapoints_6*
 virtdata_*
 .vscode/
 venv
+bin
+lib
+lib64
+pyvenv.cfg
