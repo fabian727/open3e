@@ -10,8 +10,18 @@ devices*
 Open3Edatapoints_6*
 virtdata_*
 .vscode/
+#running within venv
 venv
 bin
 lib
 lib64
 pyvenv.cfg
+#packaging
+*.egg
+__pycache__/
+*.egg-info/
+.venv/
+dist/*
+build/*
+#testing
+.coverage
