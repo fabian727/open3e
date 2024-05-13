@@ -1,0 +1,12 @@
+--can
+can0
+--mqtt
+192.168.0.3:1883:open3e
+--mqttformatstring
+"{ecuAddr:03X}/{didName}"
+--homeassistant
+--config
+devices.json
+--listen
+open3e/cmnd
+--scanall

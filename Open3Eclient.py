@@ -126,10 +126,6 @@ def on_message(client, userdata, msg):
             print('bad payload: ' + str(msg.payload)+'; topic: ' + str(msg.topic))
             payload = ''
 
-def publish2homeassistant(client, userdata, msg):
-    topic = str(msg.topic)            # Topic in String umwandeln
-    print(topic)
-
 def subscription(client, userdata, mid, reason_code_list, properties):
     print("done")
 
@@ -311,25 +307,25 @@ if(args.ecuaddr != None):
 
 
 # list of ECUs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#if(args.config != None):
-#    if(args.config == 'dev'):  # short
-#        args.config = 'devices.json'
-#    # get configuration from file
-#    with open(args.config, 'r') as file:
-#        devjson = json.load(file)
-#    # make ECU list
-#    for device, config in devjson.items():
-#        addrtx = getint(config.get("tx"))
-#        dplist = config.get("dpList")
-#        # make ecu
-#        ecu = Open3Eclass.O3Eclass(ecutx=addrtx, doip=args.doip, can=args.can, dev=dplist)
-#        dicEcus[addrtx] = ecu
-#        dicDevAddrs[device] = addrtx
-#else:
-#    # only default device
-#    ecu = Open3Eclass.O3Eclass(ecutx=deftx, doip=args.doip, can=args.can, dev=args.dev)
-#    dicEcus[deftx] = ecu
-#    dicDevAddrs[args.dev] = deftx
+if(args.config != None):
+    if(args.config == 'dev'):  # short
+        args.config = 'devices.json'
+    # get configuration from file
+    with open(args.config, 'r') as file:
+        devjson = json.load(file)
+    # make ECU list
+    for device, config in devjson.items():
+        addrtx = getint(config.get("tx"))
+        dplist = config.get("dpList")
+        # make ecu
+        ecu = Open3Eclass.O3Eclass(ecutx=addrtx, doip=args.doip, can=args.can, dev=dplist)
+        dicEcus[addrtx] = ecu
+        dicDevAddrs[device] = addrtx
+else:
+    # only default device
+    ecu = Open3Eclass.O3Eclass(ecutx=deftx, doip=args.doip, can=args.can, dev=args.dev)
+    dicEcus[deftx] = ecu
+    dicDevAddrs[args.dev] = deftx
     
 
 # MQTT setup ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -355,7 +351,27 @@ if(args.mqtt != None):
     
 # do what has to be done  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 try:
-   # listener mode
+    # scanall
+    if(args.scanall == True):
+        msglvl = 1  # show did nr
+        if(len(dicEcus) > 1):
+            msglvl = 5  # show ECU addr also
+        for addr,ecu in dicEcus.items():
+            #? if(args.verbose == True):
+            print(f"reading {hex(addr)}, {dicEcus[addr].numdps} datapoints, please be patient...")
+            lst = ecu.readAll(args.raw)
+            for itm in lst:
+                showread(addr=addr, did=itm[0], value=itm[1], idstr=itm[2], msglvl=msglvl)
+
+    #homeassistant
+    if(args.homeassistant != None):
+        hass = hass.detection()
+        #hass.discover(mqtt_client)
+        if args.listen != None:
+            hass.setCmndTopic(args.listen)
+        hass.copypaste(mqtt_client)
+
+    # listener mode
     if(args.listen != None):
         listen(args.read, args.timestep)
 
@@ -396,23 +412,6 @@ try:
             succ,code = dicEcus[ecu].writeByDid(didkey, didVal, raw=False)
             print(f"success: {succ}, code: {code}")                
         time.sleep(0.1)
-
-    # scanall
-    elif(args.scanall == True):
-        msglvl = 1  # show did nr
-        if(len(dicEcus) > 1):
-            msglvl = 5  # show ECU addr also
-        for addr,ecu in dicEcus.items():
-            #? if(args.verbose == True):
-            print(f"reading {hex(addr)}, {dicEcus[addr].numdps} datapoints, please be patient...")
-            lst = ecu.readAll(args.raw)
-            for itm in lst:
-                showread(addr=addr, did=itm[0], value=itm[1], idstr=itm[2], msglvl=msglvl)
-
-    #homeassistant
-    elif(args.homeassistant != None):
-        #hass.discover(mqtt_client)
-        hass.copypaste(mqtt_client)
 
 except (KeyboardInterrupt, InterruptedError):
     # <STRG-C> oder SIGINT to stop
