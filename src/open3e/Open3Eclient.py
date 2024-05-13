@@ -20,7 +20,7 @@ import json
 import paho.mqtt.client as paho
 
 import open3e.Open3Eclass
-
+import open3e.homeAssistant.Open3EHomeAssistant as hass
 
 def main():
     # default ECU address
@@ -283,6 +283,7 @@ def main():
     parser.add_argument("-tx", "--ecuaddr", type=str, help="ECU Address")
     parser.add_argument("-cnfg", "--config", type=str, help="json configuration file")
     parser.add_argument("-a", "--scanall", action='store_true', help="dump all dids")
+    parser.add_argument("-hass", "--homeassistant", action='store_true', help="publish all published mqtt topics to home assistant")
     parser.add_argument("-r", "--read", type=str, help="read did, e.g. 0x173,0x174")
     parser.add_argument("-w", "--write", type=str, help="write did, e.g. -w 396=D601 (raw data only!)")
     parser.add_argument("-raw", "--raw", action='store_true', help="return raw data for all dids")
@@ -301,7 +302,6 @@ def main():
 
     if(args.ecuaddr != None):
         deftx = getint(args.ecuaddr)
-
 
     # list of ECUs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if(args.config != None):
@@ -348,7 +348,27 @@ def main():
         
     # do what has to be done  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     try:
-    # listener mode
+        # scanall
+        if(args.scanall == True):
+            msglvl = 1  # show did nr
+            if(len(dicEcus) > 1):
+                msglvl = 5  # show ECU addr also
+            for addr,ecu in dicEcus.items():
+                #? if(args.verbose == True):
+                print(f"reading {hex(addr)}, {dicEcus[addr].numdps} datapoints, please be patient...")
+                lst = ecu.readAll(args.raw)
+                for itm in lst:
+                    showread(addr=addr, did=itm[0], value=itm[1], idstr=itm[2], msglvl=msglvl)
+
+        #homeassistant
+        if(args.homeassistant != None):
+            hass = hass.detection()
+            #hass.discover(mqtt_client)
+            if args.listen != None:
+                hass.setCmndTopic(args.listen)
+            hass.copypaste(mqtt_client)
+
+        # listener mode
         if(args.listen != None):
             listen(args.read, args.timestep)
 
@@ -389,18 +409,6 @@ def main():
                 succ,code = dicEcus[ecu].writeByDid(didkey, didVal, raw=False)
                 print(f"success: {succ}, code: {code}")                
             time.sleep(0.1)
-
-        # scanall
-        elif(args.scanall == True):
-            msglvl = 1  # show did nr
-            if(len(dicEcus) > 1):
-                msglvl = 5  # show ECU addr also
-            for addr,ecu in dicEcus.items():
-                #? if(args.verbose == True):
-                print(f"reading {hex(addr)}, {dicEcus[addr].numdps} datapoints, please be patient...")
-                lst = ecu.readAll(args.raw)
-                for itm in lst:
-                    showread(addr=addr, did=itm[0], value=itm[1], idstr=itm[2], msglvl=msglvl)
 
     except (KeyboardInterrupt, InterruptedError):
         # <STRG-C> oder SIGINT to stop

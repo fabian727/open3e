@@ -1,8 +1,8 @@
 import json
 import time
 import yaml
-from homeAssistant.yamlOverloader import overloader
-from homeAssistant.yamlOverloader import construct_undefined
+from open3e.homeAssistant.Open3EyamlOverloader import overloader
+from open3e.homeAssistant.Open3EyamlOverloader import construct_undefined
 
 _serial = "unknown_serial"
 
